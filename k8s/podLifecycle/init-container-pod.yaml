@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-container
+  namespace: default
+  labels:
+    app: nginx
+spec:
+  volumes:
+  - name: www-index
+    emptyDir: {}
+  initContainers:
+  - name: wget-index
+    image: busybox
+    args:
+    - wget
+    - "-O"
+    - "/testwww/index.html"
+    - http://www.baidu.com
+    volumeMounts:
+    - name: www-index
+      mountPath: "/testwww"
+  containers:
+  - name: web-index
+    image: nginx:latest
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - name: www-index
+      mountPath: "/usr/share/nginx/html"

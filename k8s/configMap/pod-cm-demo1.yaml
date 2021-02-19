@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-cm-env-demo1
+  namespace: default
+spec:
+  containers:
+  - name: testcm1
+    image: busybox
+    command: ['/bin/sh', '-c', 'env']
+    env:
+    - name: Key1
+      valueFrom:
+        configMapKeyRef:
+          key: data.1
+          name: cm-demo1
+    envFrom:
+    - configMapRef:
+        name: cm-demo1-from-cmd
+    - secretRef:
+        name: sec-demo1
+
+      

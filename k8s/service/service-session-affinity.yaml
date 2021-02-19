@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-affinity-demo
+  namespace: default
+spec:
+  type: NodePort
+  sessionAffinity: ClientIP
+  selector:
+    name: service-affinity-demo
+  ports:
+  - name: service-affinity-demo-http
+    protocol: TCP
+    port: 80
+    targetPort: 8080

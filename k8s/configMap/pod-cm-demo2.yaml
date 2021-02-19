@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Pod
+meta:
+  name: pod-cm-demo2
+  namespace: default
+spec:
+  volumes:
+  - name: # 未写完

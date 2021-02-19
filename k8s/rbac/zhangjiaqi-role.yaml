@@ -1,0 +1,9 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zhangjiaqi-role
+  namespace: kube-system
+rules:
+- apiGroups: ["", "apps"]
+  resources: ["deployments", "pods", "replicasets"]
+  verbs: ["list", "create", "get", "delete", "watch", "update", "patch"]

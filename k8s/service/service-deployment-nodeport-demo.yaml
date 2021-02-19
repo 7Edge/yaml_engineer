@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc-deploy-demo
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+         app: myapp
+      namespace: default
+    spec:
+      containers:
+      - name: nginx-server
+        image: nginx
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: svchttpd
+          protocol: TCP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-deployment-demo
+  namespace: default
+  labels:
+    name: mysvc
+    svc: demo
+spec:
+  type: NodePort
+  selector:
+    app: myapp
+  ports:
+  - port: 8080
+    targetPort: 80
+    name: svc-demo-port
+    protocol: TCP
+    nodePort: 31000

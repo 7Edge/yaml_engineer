@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: poststart-demo
+  namespace: default
+spec:
+  containers:
+  - name: poststart-container
+    image: nginx
+    imagePullPolicy: IfNotPresent
+    lifecycle:
+      postStart:
+        exec:
+          command: ["/bin/sh", "-c", "echo 'Hello from postStart Hook' > /usr/share/message"]
+        # httpGet:  # 如果本地不存在则删除
+        #   host: "10.244.2.100"
+        #   scheme: "HTTP"
+        #   port: 80
+        #   path: "/"
