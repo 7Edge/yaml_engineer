@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-depoly
+  namespace: default
+  labels:
+    nginx_deployment: test01
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+       nginx_test: test01
+  template:
+    metadata:
+      namespace: default
+      labels:
+         nginx_test: test01
+    spec:
+      containers:
+      - name: nginx-cnt
+        image: nginx:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: httpd
+          protocol: TCP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc-demo3
+  namespace: default
+  labels:
+    nginx_svc: test01
+spec:
+  type: ClusterIP
+  selector:
+    nginx_test: test01
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10
+  ports:
+  - name: nginx-httpd
+    targetPort: 80
+    port: 80
+    protocol: TCP
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nginx-base-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: test01.nginx.zjqi.top
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: nginx-svc-demo3
+          servicePort: 80  # 需要注意，大部分Ingress Controller不会将请求转发到service的port，而是查询到service select的pod的endpoints，直接转发到pod endpoint去。
+                          #  这样可以减少再serviece层面通过kube-proxy多一跳转发。
+    
