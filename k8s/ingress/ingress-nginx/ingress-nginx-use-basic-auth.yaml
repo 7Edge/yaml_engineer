@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-nginx-basic-auth
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # 认证类型
+    nginx.ingress.kubernetes.io/auth-type: basic
+    # 认证验证匹配的secret(包含auth的key，文件是hppasswd生成的),且和ingress是同namespace
+    nginx.ingress.kubernetes.io/auth-secret: ingress-basic-auth
+    # 认证上下文信息，用于说明身份认证的原因
+    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+spec:
+  rules:
+  - host: test02.nginx.zjqi.top
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: nginx-svc-demo3
+          servicePort: 80

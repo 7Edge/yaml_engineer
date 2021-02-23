@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sa-demo
+  namespace: default
+
+# serviceaccount创建基础就提供这些就够了。对应的secret可能会通过相应的准入控制器进行创建并关联上。
