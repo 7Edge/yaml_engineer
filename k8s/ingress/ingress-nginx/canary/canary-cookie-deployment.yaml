@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: canary
+  labels:
+    app: canary
+spec:
+  template:
+    metadata:
+      labels:
+        app: canary
+    spec:
+      containers:
+      - name: canary
+        image: cnych/echoserver
+        ports:
+        - containerPort: 8080
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+  selector:
+    matchLabels:
+      app: canary
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: canary
+  labels:
+    app: canary
+spec:
+  selector:
+    app: canary
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: canary
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/canary: "true"  # 开启灰度发布机制，首先得启用Canary
+    nginx.ingress.kubernetes.io/canary-by-header: "canary"  # 只要带有这个请求头名，且值是always或者nerver的，那么就会生效对应效果
+    nginx.ingress.kubernetes.io/canary-by-header-value: "user-define"  # 只有上面的canary设置了，且值是该值时，才会进入canary版本
+    nginx.ingress.kubernetes.io/canary-by-cookie: "zhangjiaqi"  # 校验该cookie名的值是否为never or always
+    nginx.ingress.kubernetes.io/canary-weight: "30"  # 百分之30的比例，将匹配到规则的流量切分到当前canary环境
+spec:
+  rules:
+  - host: echo.zjqi.top
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: canary
+          servicePort: 80
