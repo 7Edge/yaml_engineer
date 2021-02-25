@@ -1,0 +1,28 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: TraefikService
+metadata:
+  name: mirror-traefiksvc
+spec:
+  mirroring:
+    name: svc01  # 发送请求到k8s service的 v1
+    port: 80
+    mirrors:
+    - name: svc02  # 镜像请求v2 服务
+      percent: 50
+      port: 80
+
+---
+
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: mirror-traffic-ingressroute
+spec:
+  endPoints:
+  - web
+  routes:
+  - match: Host(`mirror.zjqi.top`)
+    kind: Rule
+    services:
+    - kind: TraefikService
+      name: mirror-traefiksvc
