@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami
+  namespace: default
+  labels:
+    app: whoami
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: whoami
+  template:
+    metadata:
+      namespace: default
+      name: whoami
+      labels:
+        app: whoami
+    spec:
+      containers:
+      - name: whoami
+        image: containous/whoami
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: web
+          protocol: TCP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoami
+  namespace: default
+  labels:
+    app: whoami
+spec:
+  selector:
+    app: whoami
+  type: ClusterIP
+  ports:
+  - name: web
+    port: 80
+    targetPort: 80
+    protocol: TCP
+
+---
+
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami-ingressroute
+  namespace: default
+spec:
+  endPoints:
+  - websecure
+  routes:
+  - match: Host(`who.zjqi.top`) && Path(`/tls`)
+    kind: Rule
+    services:
+    - name: whoami
+      port: 80
+  tls:
+    secretName: who-tls

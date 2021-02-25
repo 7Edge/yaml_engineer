@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appv2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: appv2
+  template:
+    metadata:
+      labels:
+        app: appv2
+        use: test
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: appv2port
+          containerPort: 80
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: appv2
+spec:
+  type: ClusterIP
+  selector:
+    app: appv2
+  ports:
+  - name: nginx
+    port: 80
+    targetPort: 80
+    protocol: TCP

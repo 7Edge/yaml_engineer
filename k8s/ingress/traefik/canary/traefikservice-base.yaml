@@ -1,0 +1,30 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: TraefikService
+metadata:
+  name: traefiksvc-wrr
+spec:
+  weighted:
+    services:
+    - name: appv1
+      weight: 3  # 权重
+      port: 80
+      kind: Service  # 可选默认是Service
+    - name: appv2
+      weight: 1
+      port: 80
+
+---
+
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: canary-wrr
+spec:
+  endPoints:
+  - web
+  routes:
+  - match: Host(`who.zjqi.top`)
+    kind: Rule
+    services:
+    - kind: TraefikService
+      name: traefiksvc-wrr

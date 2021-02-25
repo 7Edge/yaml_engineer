@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami
+  namespace: default
+  labels:
+    app: whoami
+spec:
+  selector:
+    matchLabels:
+      app: whoami
+  replicas: 1
+  template:
+    metadata:
+      name: whoami
+      labels:
+        app: whoami
+    spec:
+      containers:
+      - name: whoami
+        image: containous/whoami
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: whoami
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoami
+  labels:
+    app: whoami
+spec:
+  selector:
+    app: whoami
+  ports:
+  - name: web
+    port: 80
+    targetPort: 80
+    protocol: TCP
+
+---
+
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami-ingressroute-notls
+  namespace: default
+spec:
+  endPoints:
+  - web
+  routes:
+  - match: Host(`who.zjqi.top`) && PathPrefix(`/notls`)
+    kind: Rule
+    services:
+    - name: whoami
+      port: 80
