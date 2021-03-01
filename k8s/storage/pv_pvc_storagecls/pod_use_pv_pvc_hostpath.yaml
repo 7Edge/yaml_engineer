@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-pv-pvc-demo
+  namespace: default
+spec:
+  containers:
+  - name: ng
+    image: nginx:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 80
+    volumeMounts:
+    - mountPath: "/usr/share/nginx/html"
+      name: pvc
+  volumes:
+  - name: pvc
+    persistentVolumeClaim:
+      claimName: pvc-hostpath
+  nodeSelector:
+    kubernetes.io/hostname: master
+# tolerations:
+# - key: node-role.kubernetes.io/master
+#   operator: Equal
+#   value: NoSchedule
+  tolerations:   # kubeadm 安装的集群默认情况下master是有污点，需要容忍这个污点才可以部署
+    - key: "node-role.kubernetes.io/master"
+      operator: "Equal"
+      effect: "NoSchedule"
+      
+    
