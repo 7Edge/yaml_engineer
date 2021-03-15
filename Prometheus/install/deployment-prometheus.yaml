@@ -1,0 +1,143 @@
+# 首先得有个local pv,pvc, storage class
+# storageclass和pv都是全局的吗？不受namespace限制？
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage-kube-demo  
+provisioner: kubernetes.io/no-provisioner  # 表明不需要自动创建pv，因为我们手动创建了
+volumeBindingMode: WaitForFirstConsumer  # 表明只有pod消费了对应的pvc才会进行binding pv
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: prometheus-pv
+spec:
+  local:
+    path: /data/k8s/prometheus
+  storageClassName: local-storage-kube-demo
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 10Gi
+  volumeMode: Filesystem
+  persistentVolumeReclaimPolicy: Retain
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - node2
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: kube-mon
+spec:
+  storageClassName: local-storage-kube-demo
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config-cm
+  namespace: kube-mon
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      scrape_timeout: 15s
+    scrape_configs:
+    - job_name: 'prometheus'
+      static_configs:
+      - targets: ['localhost:9090']
+    - job_name: 'coredns'
+      static_configs:
+      - targets: ['10.244.0.29:9153', '10.244.0.28:9153']
+    - job_name: 'redis'
+      static_configs:
+      - targets: ['redis:9121']
+    - job_name: 'k8s-nodes'  # 这样就可以配置动态自动自动发现k8s节点
+      kubernetes_sd_configs:  # 这种配置是怎么知道apiserver地址的呢？难道是必须prometheus也部署在k8s集群中，只能自动发现当前所在集群的？
+      - role: node
+      relabel_configs:
+      - source_labels: ["__address__"]
+        regex: "(.*):10250"
+        replacement: "${1}:9100"
+        target_label: __address__
+        action: replace
+      - action: labelmap
+        regex: "__meta_kubernetes_node_label_(.+)"
+    - job_name: "k8s-kubectl"
+      kubernetes_sd_configs:  # 这种配置是怎么知道apiserver地址的呢？难道是必须prometheus也部署在k8s集群中，只能自动发现当前所在集群的？
+      - role: node
+      schema: https
+      
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: kube-mon
+  labels:
+    app: prometheus
+spec:  
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      name: prometheus
+      namespace: kube-mon
+      labels:
+        app: prometheus
+    spec:
+      securityContext:
+        runAsUser: 0
+      serviceAccountName: prometheus
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v2.14.0
+        imagePullPolicy: IfNotPresent
+        args:
+          - "--config.file=/etc/prometheus/prometheus.yml"
+          - "--storage.tsdb.path=/prometheus"  # 指定tsdb数据路径
+          - "--storage.tsdb.retention.time=24h"
+          - "--web.enable-admin-api"  # 控制对admin HTTP API的访问，其中包括删除时间序列等功能
+          - "--web.enable-lifecycle"  # 支持热更新，直接执行localhost:9090/-/reload立即生效
+          - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+          - "--web.console.templates=/usr/share/prometheus/consoles"
+        ports:
+        - containerPort: 9090
+          name: http
+        volumeMounts:
+        - name: prome-config
+          mountPath: "/etc/prometheus"
+        - name: prome-data
+          mountPath: "/prometheus"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 100m
+            memory: 512Mi
+      volumes:
+      - name: prome-config
+        configMap:
+          name: prometheus-config-cm
+      - name: prome-data
+        persistentVolumeClaim: 
+          claimName: prometheus-pvc
+    
+    
