@@ -36,7 +36,15 @@ data:
         action: replace
       - action: labelmap
         regex: "__meta_kubernetes_node_label_(.+)"
-    - job_name: "k8s-kubectl"
-      kubernetes_sd_configs:  # 这种配置是怎么知道apiserver地址的呢？难道是必须prometheus也部署在k8s集群中，只能自动发现当前所在集群的？
+    - job_name: 'k8s-kubelet'  # kubelet现在集成了Cadvisor所以通过kubectl的metric接口可以获取docker容器指标
+      kubernetes_sd_configs:
       - role: node
-      schema: https
+      scheme: https
+      bearer_token_file: '/var/run/secrets/kubernetes.io/serviceaccount/token'
+      tls_config:
+        ca_file: '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+        insecure_skip_verify: true
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      
