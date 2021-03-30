@@ -44,45 +44,6 @@ spec:
       storage: 10Gi
 
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-config-cm
-  namespace: kube-mon
-data:
-  prometheus.yml: |
-    global:
-      scrape_interval: 15s
-      scrape_timeout: 15s
-    scrape_configs:
-    - job_name: 'prometheus'
-      static_configs:
-      - targets: ['localhost:9090']
-    - job_name: 'coredns'
-      static_configs:
-      - targets: ['10.244.0.29:9153', '10.244.0.28:9153']
-    - job_name: 'redis'
-      static_configs:
-      - targets: ['redis:9121']
-    - job_name: 'k8s-nodes'  # 这样就可以配置动态自动自动发现k8s节点
-      kubernetes_sd_configs:  # 这种配置是怎么知道apiserver地址的呢？难道是必须prometheus也部署在k8s集群中，只能自动发现当前所在集群的？
-      - role: node
-      relabel_configs:
-      - source_labels: ["__address__"]
-        regex: "(.*):10250"
-        replacement: "${1}:9100"
-        target_label: __address__
-        action: replace
-      - action: labelmap
-        regex: "__meta_kubernetes_node_label_(.+)"
-    - job_name: "k8s-kubectl"
-      kubernetes_sd_configs:  # 这种配置是怎么知道apiserver地址的呢？难道是必须prometheus也部署在k8s集群中，只能自动发现当前所在集群的？
-      - role: node
-      schema: https
-      
-
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

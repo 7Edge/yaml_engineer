@@ -1,0 +1,42 @@
+# 将prometheus的配置的cm单独用一个yaml文件来描述。修改起来比较方便
+# 修改后的规范操作：
+#    1. kubectl apply -f .... 更新cm   # 虽然confimap是可以热更新到对应的挂载了该cm的pod中，但是不代表pod的程序加载了。所以有个第二步骤
+#    2. 在开启了prometheus的flag： --web.enable-lifecycle  ; 让后就可以通过prometheus的web接口/-/reload来，热加载配置：
+#       执行如下： curl -X POST "http://prmetheus_ip:9090/-/reload"
+#    3. 查看是否加载了配置，通过prometheus的web console页面 查看status下的runtime information就可以了
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config-cm
+  namespace: kube-mon
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      scrape_timeout: 15s
+    scrape_configs:
+    - job_name: 'prometheus'
+      static_configs:
+      - targets: ['localhost:9090']
+    - job_name: 'coredns'
+      static_configs:
+      - targets: ['10.244.0.29:9153', '10.244.0.28:9153']
+    - job_name: 'redis'
+      static_configs:
+      - targets: ['redis:9121']
+    - job_name: 'k8s-nodes'  # 这样就可以配置动态自动自动发现k8s节点
+      kubernetes_sd_configs:  # 这种配置是怎么知道apiserver地址的呢？难道是必须prometheus也部署在k8s集群中，只能自动发现当前所在集群的？
+      - role: node
+      relabel_configs:
+      - source_labels: ["__address__"]
+        regex: "(.*):10250"
+        replacement: "${1}:9100"
+        target_label: __address__
+        action: replace
+      - action: labelmap
+        regex: "__meta_kubernetes_node_label_(.+)"
+    - job_name: "k8s-kubectl"
+      kubernetes_sd_configs:  # 这种配置是怎么知道apiserver地址的呢？难道是必须prometheus也部署在k8s集群中，只能自动发现当前所在集群的？
+      - role: node
+      schema: https
